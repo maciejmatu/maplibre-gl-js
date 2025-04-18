@@ -13,6 +13,7 @@ import {HandlerManager} from './handler_manager';
 import {Camera, type CameraOptions, type CameraUpdateTransformFunction, type FitBoundsOptions} from './camera';
 import {LngLat} from '../geo/lng_lat';
 import {LngLatBounds} from '../geo/lng_lat_bounds';
+import {type PaddingOptions} from '../geo/edge_insets';
 import Point from '@mapbox/point-geometry';
 import {AttributionControl, type AttributionControlOptions, defaultAttributionControlOptions} from './control/attribution_control';
 import {LogoControl} from './control/logo_control';
@@ -355,6 +356,10 @@ export type MapOptions = {
      * keep the camera above ground when pitch \> 90 degrees.
      */
     centerClampedToGround?: boolean;
+    /**
+     * The padding to apply to the map when displaying popups.
+     */
+    popupPadding?: PaddingOptions | null;
 };
 
 export type AddImageOptions = {
@@ -495,6 +500,7 @@ export class Map extends Camera {
     _styleDirty: boolean;
     _sourcesDirty: boolean;
     _placementDirty: boolean;
+    _popupPadding: PaddingOptions | null;
 
     _loaded: boolean;
     _idleTriggered = false;
@@ -656,6 +662,7 @@ export class Map extends Camera {
         this._maxCanvasSize = resolvedOptions.maxCanvasSize;
         this.transformCameraUpdate = resolvedOptions.transformCameraUpdate;
         this.cancelPendingTileRequestsWhileZooming = resolvedOptions.cancelPendingTileRequestsWhileZooming === true;
+        this._popupPadding = resolvedOptions.popupPadding || null;
 
         this._imageQueueHandle = ImageRequest.addThrottleControl(() => this.isMoving());
 
@@ -3560,5 +3567,34 @@ export class Map extends Camera {
         this._lazyInitEmptyStyle();
         this.style.setProjection(projection);
         return this._update(true);
+    }
+
+    /**
+     * Sets the popup padding for the map.
+     * This padding will be used by all popups that don't specify their own padding.
+     *
+     * @param padding - The popup padding to set
+     * @returns this
+     * @example
+     * ```ts
+     * map.setPopupPadding({top: 50, bottom: 50, left: 50, right: 50});
+     * ```
+     */
+    setPopupPadding(padding: PaddingOptions): this {
+        this._popupPadding = padding;
+        return this;
+    }
+
+    /**
+     * Returns the popup padding value for the map.
+     *
+     * @returns The popup padding value, or null if not set
+     * @example
+     * ```ts
+     * const padding = map.getPopupPadding();
+     * ```
+     */
+    getPopupPadding(): PaddingOptions | null {
+        return this._popupPadding;
     }
 }

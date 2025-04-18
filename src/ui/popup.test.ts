@@ -854,4 +854,104 @@ describe('popup', () => {
         map.setCenter([180, 0]);
         expect(popup.getElement().style.opacity).toBe('0.2');
     });
+
+    test('Popup with locationOccludedOpacity renders with opacity when location is occluded', () => {
+        const map = createMap();
+        map.transform.isLocationOccluded = vi.fn().mockReturnValue(true);
+        
+        const popup = new Popup({locationOccludedOpacity: 0.5})
+            .setText('Test')
+            .setLngLat([0, 0])
+            .addTo(map);
+        
+        popup._updateOpacity();
+        
+        expect(popup.getElement().style.opacity).toBe('0.5');
+    });
+    
+    test('Popup with locationOccludedOpacity renders with normal opacity when location is not occluded', () => {
+        const map = createMap();
+        map.transform.isLocationOccluded = vi.fn().mockReturnValue(false);
+        
+        const popup = new Popup({locationOccludedOpacity: 0.5})
+            .setText('Test')
+            .setLngLat([0, 0])
+            .addTo(map);
+        
+        popup._updateOpacity();
+        
+        expect(popup.getElement().style.opacity).toBe('');
+    });
+    
+    test('Popup without locationOccludedOpacity does not change opacity regardless of occlusion', () => {
+        const map = createMap();
+        map.transform.isLocationOccluded = vi.fn().mockReturnValue(true);
+        
+        const popup = new Popup()
+            .setText('Test')
+            .setLngLat([0, 0])
+            .addTo(map);
+        
+        popup._updateOpacity();
+        
+        expect(popup.getElement().style.opacity).toBe('');
+    });
+
+    test('Popup respects map popupPadding when determining anchor', () => {
+        const map = createMap({
+            width: 1024,
+            height: 768,
+            popupPadding: {top: 50, bottom: 50, left: 50, right: 50}
+        });
+
+        // Mock the container size to match the specified map dimensions 
+        Object.defineProperty(map.getContainer(), 'offsetWidth', {value: 1024});
+        Object.defineProperty(map.getContainer(), 'offsetHeight', {value: 768});
+        
+        // Create a popup positioned to be near top of screen
+        const topPopup = new Popup()
+            .setText('Top Test')
+            .setLngLat([0, 0]);
+        
+        // Override map.project to return a position near the top
+        const originalProject = map.project;
+        map.project = vi.fn().mockReturnValue(new Point(512, 60));
+        
+        topPopup.addTo(map);
+        
+        // With 50px top padding, it should use 'bottom' anchor instead of 'top'
+        expect(topPopup.getElement().classList.contains('maplibregl-popup-anchor-bottom')).toBeTruthy();
+        
+        // Restore project function
+        map.project = originalProject;
+    });
+    
+    test('Popup respects map popupPadding when determining anchor at the right side', () => {
+        const map = createMap({
+            width: 1024,
+            height: 768,
+            popupPadding: {top: 10, bottom: 10, left: 10, right: 100}
+        });
+        
+        // Mock the container size
+        Object.defineProperty(map.getContainer(), 'offsetWidth', {value: 1024});
+        Object.defineProperty(map.getContainer(), 'offsetHeight', {value: 768});
+        
+        // Create a popup positioned to be near right edge of screen
+        const rightPopup = new Popup()
+            .setText('Right Test')
+            .setLngLat([0, 0]);
+        
+        // Override map.project to return a position near the right edge
+        const originalProject = map.project;
+        map.project = vi.fn().mockReturnValue(new Point(950, 384));
+        
+        rightPopup.addTo(map);
+        
+        // With 100px right padding, the anchor should contain 'left'
+        expect(rightPopup.getElement().classList.contains('maplibregl-popup-anchor-left')).toBeTruthy();
+        
+        // Restore project function
+        map.project = originalProject;
+    });
 });

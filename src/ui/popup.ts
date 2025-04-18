@@ -11,6 +11,7 @@ import type {PositionAnchor} from './anchor';
 import type {Map} from './map';
 import type {LngLatLike} from '../geo/lng_lat';
 import type {PointLike} from './camera';
+import {type PaddingOptions} from '../geo/edge_insets';
 
 const defaultOptions = {
     closeButton: true,
@@ -632,30 +633,31 @@ export class Popup extends Evented {
 
         let anchor = this.options.anchor;
         const offset = normalizeOffset(this.options.offset);
+        const padding = normalizePadding(this._map.getPopupPadding());
 
         if (!anchor) {
             const width = this._container.offsetWidth;
             const height = this._container.offsetHeight;
-            let anchorComponents;
+            let anchorComponents: PositionAnchor[] = [];
 
-            if (pos.y + offset.bottom.y < height) {
+            if (pos.y + offset.bottom.y < height + padding.top) {
                 anchorComponents = ['top'];
-            } else if (pos.y > this._map.transform.height - height) {
+            } else if (pos.y > this._map.transform.height - height - padding.bottom) {
                 anchorComponents = ['bottom'];
             } else {
                 anchorComponents = [];
             }
 
-            if (pos.x < width / 2) {
+            if (pos.x < width / 2 + padding.left) {
                 anchorComponents.push('left');
-            } else if (pos.x > this._map.transform.width - width / 2) {
+            } else if (pos.x > this._map.transform.width - width / 2 - padding.right) {
                 anchorComponents.push('right');
             }
 
             if (anchorComponents.length === 0) {
                 anchor = 'bottom';
             } else {
-                anchor = (anchorComponents.join('-') as any);
+                anchor = (anchorComponents.join('-') as PositionAnchor);
             }
         }
 
@@ -681,6 +683,15 @@ export class Popup extends Evented {
 
     _onClose = () => {
         this.remove();
+    };
+}
+
+function normalizePadding(padding?: PaddingOptions | null) {
+    return {
+        top: padding?.top || 0,
+        bottom: padding?.bottom || 0,
+        left: padding?.left || 0,
+        right: padding?.right || 0
     };
 }
 
